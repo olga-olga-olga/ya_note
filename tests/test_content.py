@@ -8,40 +8,49 @@ from notes.models import Note
 User = get_user_model()
 
 
-class TestContent(TestCase):
+class TestContext(TestCase):
 
-    NOTES_URL = reverse('notes:list')
+    LIST_URL = reverse('notes:list')
+
+    TITLE = 'Заголовок'
+    TEXT = 'Текст'
+    SLUG = 'slugs'
 
     @classmethod
     def setUpTestData(cls):
         cls.author = User.objects.create(
-            username='Зарегистрированный пользователь'
+            username='Аутентифицированный и авторизованы пользователь'
         )
-        all_notes = [
-            Note(
-                title=f'Заметка {index}',
-                text='Просто текст.',
-                slug=f'slug{index}',
-                author=cls.author,
-            )
-            for index in range(2)
-        ]
-        Note.objects.bulk_create(all_notes)
+        cls.reader = User.objects.create(
+            username='Аутентифицированный пользователь'
+        )
+        cls.notes = Note.objects.create(
+            title=cls.TITLE,
+            text=cls.TEXT,
+            slug=cls.SLUG,
+            author=cls.author,
+        )
 
-    def test_notes_order(self):
+    def test_note_get_into_list(self):
         self.client.force_login(self.author)
-        response = self.client.get(self.NOTES_URL)
+        response = self.client.get(self.LIST_URL)
         object_list = response.context['object_list']
-        all_id = [note.id for note in object_list]
-        sorted_id = sorted(all_id)
-        self.assertEqual(all_id, sorted_id)
-
-    def test_anonymous_client_has_no_form(self):
-        response = self.client.get(self.detail_url)
-        self.assertNotIn('form', response.context)
+        self.assertIn(self.notes, object_list)
+    
+    def test_note_not_get_into_someone_list(self):
+        self.client.force_login(self.reader)
+        response = self.client.get(self.LIST_URL)
+        object_list = response.context['object_list']
+        self.assertNotIn(self.notes, object_list)
 
     def test_authorized_client_has_form(self):
         self.client.force_login(self.author)
-        response = self.client.get(self.detail_url)
-        self.assertIn('form', response.context)
-       
+        urls = (
+            ('notes:add', None),
+            ('notes:edit', (self.notes.slug,)),
+        )
+        for name, args in urls:
+            with self.subTest(name=name, args=args):
+                url = reverse(name, args=args)
+                response = self.client.get(url)
+                self.assertIn('form', response.context)
