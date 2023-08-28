@@ -36,7 +36,7 @@ class TestContext(TestCase):
         response = self.client.get(self.LIST_URL)
         object_list = response.context['object_list']
         self.assertIn(self.notes, object_list)
-    
+
     def test_note_not_get_into_someone_list(self):
         self.client.force_login(self.reader)
         response = self.client.get(self.LIST_URL)
