@@ -42,7 +42,7 @@ class TestNoteCreation(TestCase):
         notes_count = Note.objects.count()
         self.assertEqual(notes_count, 0)
 
-    def test_user_can_create_comment(self):
+    def test_user_can_create_note(self):
         response = self.auth_client.post(self.url, data=self.form_data)
         done_url = reverse('notes:success')
         self.assertRedirects(response, f'{done_url}')
@@ -67,3 +67,36 @@ class TestNoteCreation(TestCase):
         )
         notes_count = Note.objects.count()
         self.assertEqual(notes_count, 1)
+        self.assertEqual(response.status_code, 200)
+
+
+class TestAutoFillSlug(TestCase):
+
+    TITLE = 'Заголовок'
+    TEXT = 'Текст'
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create(username='Мимо Крокодил')
+        cls.auth_client = Client()
+        cls.auth_client.force_login(cls.user)
+        cls.form_data = {
+            'title': cls.TITLE,
+            'text': cls.TEXT,
+            'author': cls.user
+        }
+        cls.add_url = reverse('notes:add')
+        cls.done_url = reverse('notes:success')
+        cls.list_url = reverse('notes:list')
+
+    def test_automatic_slug_filling(self):
+        response = self.auth_client.post(self.add_url, data=self.form_data)
+        self.assertRedirects(response, f'{self.done_url}')
+        notes_count = Note.objects.count()
+        self.assertEqual(notes_count, 1)
+        note = Note.objects.get()
+        self.assertTrue(note.slug)
+
+
+
+
