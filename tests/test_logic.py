@@ -15,6 +15,8 @@ class TestNoteCreation(TestCase):
     TITLE = 'Заголовок'
     TEXT = 'Текст'
     SLUG = 'slugs'
+    NEW_TITLE = 'Новый заголовок'
+    NEW_TEXT = 'Новый текст'
 
     @classmethod
     def setUpTestData(cls):
@@ -24,6 +26,12 @@ class TestNoteCreation(TestCase):
         cls.form_data = {
             'title': cls.TITLE,
             'text': cls.TEXT,
+            'slug': cls.SLUG,
+            'author': cls.user
+        }
+        cls.form_new_data = {
+            'title': cls.NEW_TITLE,
+            'text': cls.NEW_TEXT,
             'slug': cls.SLUG,
             'author': cls.user
         }
@@ -45,3 +53,17 @@ class TestNoteCreation(TestCase):
         self.assertEqual(note.text, self.TEXT)
         self.assertEqual(note.slug, self.SLUG)
         self.assertEqual(note.author, self.user)
+
+    def test_not_use_same_slag(self):
+        self.auth_client.post(self.url, data=self.form_data)
+        notes_count = Note.objects.count()
+        self.assertEqual(notes_count, 1)
+        response = self.auth_client.post(self.url, data=self.form_new_data)
+        self.assertFormError(
+            response,
+            form='form',
+            field='slug',
+            errors=(f'{self.SLUG}' + WARNING)
+        )
+        notes_count = Note.objects.count()
+        self.assertEqual(notes_count, 1)
